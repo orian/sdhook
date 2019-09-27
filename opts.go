@@ -1,22 +1,22 @@
 package sdhook
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/api/option"
 	"io/ioutil"
 	"net/http"
-
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/knq/jwt/gserviceaccount"
-
 	"github.com/sirupsen/logrus"
-
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 	errorReporting "google.golang.org/api/clouderrorreporting/v1beta1"
-	logging "google.golang.org/api/logging/v2"
+	"cloud.google.com/go/logging"
 )
 
 // Option represents an option that modifies the Stackdriver hook settings.
@@ -42,17 +42,17 @@ func ProjectID(projectID string) Option {
 
 // EntriesService is an option that sets the Google API entry service to use
 // with Stackdriver.
-func EntriesService(service *logging.EntriesService) Option {
-	return func(sh *StackdriverHook) error {
-		sh.service = service
-		return nil
-	}
-}
+// func EntriesService(service *logging.EntriesService) Option {
+// 	return func(sh *StackdriverHook) error {
+// 		sh.service = service
+// 		return nil
+// 	}
+// }
 
 // LoggingService is an option that sets the Google API logging service to use.
-func LoggingService(service *logging.Service) Option {
+func LoggingClient(service *logging.Client) Option {
 	return func(sh *StackdriverHook) error {
-		sh.service = service.Entries
+		sh.service = service
 		return nil
 	}
 }
@@ -70,7 +70,8 @@ func ErrorService(errorService *errorReporting.Service) Option {
 func HTTPClient(client *http.Client) Option {
 	return func(sh *StackdriverHook) error {
 		// create logging service
-		l, err := logging.New(client)
+		l, err := logging.NewClient(context.Background(), "",
+			option.WithHTTPClient(client))
 		if err != nil {
 			return err
 		}
@@ -84,13 +85,13 @@ func HTTPClient(client *http.Client) Option {
 			return err
 		}
 
-		return LoggingService(l)(sh)
+		return LoggingClient(l)(sh)
 	}
 }
 
 // MonitoredResource is an option that sets the monitored resource to send with
 // each log entry.
-func MonitoredResource(resource *logging.MonitoredResource) Option {
+func MonitoredResource(resource *mrpb.MonitoredResource) Option {
 	return func(sh *StackdriverHook) error {
 		sh.resource = resource
 		return nil
@@ -104,7 +105,7 @@ func MonitoredResource(resource *logging.MonitoredResource) Option {
 // the list of labels required per ResType.
 func Resource(typ ResType, labels map[string]string) Option {
 	return func(sh *StackdriverHook) error {
-		return MonitoredResource(&logging.MonitoredResource{
+		return MonitoredResource(&mrpb.MonitoredResource{
 			Type:   string(typ),
 			Labels: labels,
 		})(sh)
@@ -166,7 +167,7 @@ func ErrorReportingService(service string) Option {
 
 // requiredScopes are the oauth2 scopes required for stackdriver logging.
 var requiredScopes = []string{
-	logging.CloudPlatformScope,
+	logging.WriteScope,
 }
 
 // GoogleServiceAccountCredentialsJSON is an option that creates the

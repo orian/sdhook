@@ -9,16 +9,16 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
+	"cloud.google.com/go/logging"
 	"github.com/facebookgo/stack"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/sirupsen/logrus"
-
 	errorReporting "google.golang.org/api/clouderrorreporting/v1beta1"
-	logging "google.golang.org/api/logging/v2"
+	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
+	logpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 const (
@@ -36,13 +36,15 @@ type StackdriverHook struct {
 	projectID string
 
 	// service is the logging service.
-	service *logging.EntriesService
+	service *logging.Client
+
+	logger *logging.Logger
 
 	// service is the error reporting service.
 	errorService *errorReporting.Service
 
 	// resource is the monitored resource.
-	resource *logging.MonitoredResource
+	resource *mrpb.MonitoredResource
 
 	// logName is the name of the log.
 	logName string
@@ -140,13 +142,34 @@ func (sh *StackdriverHook) Levels() []logrus.Level {
 	return sh.levels
 }
 
+func severity(level logrus.Level) logging.Severity {
+	switch level {
+	case logrus.TraceLevel:
+		return logging.Debug
+	case logrus.DebugLevel:
+		return logging.Debug
+	case logrus.InfoLevel:
+		return logging.Info
+	case logrus.WarnLevel:
+		return logging.Warning
+	case logrus.ErrorLevel:
+		return logging.Error
+	case logrus.FatalLevel:
+		return logging.Critical
+	case logrus.PanicLevel:
+		return logging.Emergency
+	}
+
+	return logging.Default
+}
+
 // Fire writes the message to the Stackdriver entry service.
 func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 	sh.waitGroup.Add(1)
 	go func(entry *logrus.Entry) {
 		defer sh.waitGroup.Done()
-		var httpReq *logging.HttpRequest
 
+		var httpReq *logging.HTTPRequest
 		// convert entry data to labels
 		labels := make(map[string]string, len(entry.Data))
 		for k, v := range entry.Data {
@@ -155,15 +178,11 @@ func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 				labels[k] = x
 
 			case *http.Request:
-				httpReq = &logging.HttpRequest{
-					Referer:       x.Referer(),
-					RemoteIp:      x.RemoteAddr,
-					RequestMethod: x.Method,
-					RequestUrl:    x.URL.String(),
-					UserAgent:     x.UserAgent(),
+				httpReq = &logging.HTTPRequest{
+					Request: x,
 				}
 
-			case *logging.HttpRequest:
+			case *logging.HTTPRequest:
 				httpReq = x
 
 			default:
@@ -199,12 +218,12 @@ func (sh *StackdriverHook) copyEntry(entry *logrus.Entry) *logrus.Entry {
 	return &e
 }
 
-func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HttpRequest) {
+func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) {
 	// The log entry payload schema is defined by the Google fluentd
 	// logging agent. See more at:
 	// https://github.com/GoogleCloudPlatform/fluent-plugin-google-cloud
 	logEntry := map[string]interface{}{
-		"severity":         severityString(entry.Level),
+		"severity":         severity(entry.Level).String(),
 		"timestampSeconds": strconv.FormatInt(entry.Time.Unix(), 10),
 		"timestampNanos":   strconv.FormatInt(entry.Time.UnixNano()-entry.Time.Unix()*1000000000, 10),
 		"message":          entry.Message,
@@ -243,7 +262,7 @@ func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels ma
 	}
 }
 
-func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry, labels map[string]string, httpReq *logging.HttpRequest) {
+func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) {
 	if sh.errorReportingServiceName != "" && isError(entry) {
 		errorEvent := sh.buildErrorReportingEvent(entry, labels, httpReq)
 		if sh != nil && sh.errorService != nil && sh.errorService.Projects != nil && sh.errorService.Projects.Events != nil {
@@ -259,28 +278,28 @@ func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry, labels map[
 		if sh.errorReportingLogName != "" && isError(entry) {
 			logName = sh.errorReportingLogName
 		}
-		_, err := sh.service.Write(&logging.WriteLogEntriesRequest{
-			LogName:        logName,
-			Resource:       sh.resource,
-			Labels:         sh.labels,
-			PartialSuccess: sh.partialSuccess,
-			Entries: []*logging.LogEntry{
-				{
-					Severity:    severityString(entry.Level),
-					Timestamp:   entry.Time.Format(time.RFC3339),
-					TextPayload: entry.Message,
-					Labels:      labels,
-					HttpRequest: httpReq,
-				},
-			},
-		}).Do()
-		if err != nil {
-			log.Println("cannot deliver log entry:", err)
+		entrySd := logging.Entry{
+			Timestamp:   entry.Time,
+			Severity:    severity(entry.Level),
+			Payload:     entry.Message,
+			Labels:      labels,
+			HTTPRequest: httpReq,
+			LogName:     logName,
+			Resource:    nil,
 		}
+		if c := entry.Caller; c != nil {
+			entrySd.SourceLocation = &logpb.LogEntrySourceLocation{
+				File:     c.File,
+				Function: c.Function,
+				Line:     int64(c.Line),
+			}
+		}
+		logger := sh.service.Logger("")
+		logger.Log(entrySd)
 	}
 }
 
-func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HttpRequest) errorReporting.ReportedErrorEvent {
+func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) errorReporting.ReportedErrorEvent {
 	errorEvent := errorReporting.ReportedErrorEvent{
 		EventTime: entry.Time.Format(time.RFC3339),
 		Message:   entry.Message,
@@ -305,24 +324,13 @@ func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, labels 
 	}
 	if httpReq != nil {
 		errRepHttpRequest := &errorReporting.HttpRequestContext{
-			Method:    httpReq.RequestMethod,
-			Referrer:  httpReq.Referer,
-			RemoteIp:  httpReq.RemoteIp,
-			Url:       httpReq.RequestUrl,
-			UserAgent: httpReq.UserAgent,
+			Method:    httpReq.Request.Method,
+			Referrer:  httpReq.Request.Referer(),
+			RemoteIp:  httpReq.RemoteIP,
+			Url:       httpReq.Request.URL.String(),
+			UserAgent: httpReq.Request.UserAgent(),
 		}
 		errorEvent.Context.HttpRequest = errRepHttpRequest
 	}
 	return errorEvent
-}
-
-func severityString(l logrus.Level) string {
-	switch l {
-	case logrus.FatalLevel:
-		return "critical"
-	case logrus.PanicLevel:
-		return "emergency"
-	default:
-		return strings.ToUpper(l.String())
-	}
 }
