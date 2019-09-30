@@ -3,26 +3,29 @@
 package sdhook
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
 
+	"cloud.google.com/go/errorreporting"
 	"cloud.google.com/go/logging"
-	"github.com/facebookgo/stack"
 	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/sirupsen/logrus"
-	errorReporting "google.golang.org/api/clouderrorreporting/v1beta1"
+	"google.golang.org/api/option"
 	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 	logpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 const (
-	// DefaultName is the default name passed to LogName when using service
+	// DefaultName is the default name passed to LogName when using serviceClient
 	// account credentials.
 	DefaultName = "default"
 )
@@ -35,13 +38,13 @@ type StackdriverHook struct {
 	// projectID is the projectID
 	projectID string
 
-	// service is the logging service.
-	service *logging.Client
+	// serviceClient is the logging serviceClient.
+	serviceClient *logging.Client
 
 	logger *logging.Logger
 
-	// service is the error reporting service.
-	errorService *errorReporting.Service
+	// serviceClient is the error reporting serviceClient.
+	errorClient *errorreporting.Client
 
 	// resource is the monitored resource.
 	resource *mrpb.MonitoredResource
@@ -60,7 +63,7 @@ type StackdriverHook struct {
 	// to the Google logging agent.
 	agentClient *fluent.Fluent
 
-	// errorReportingServiceName defines the value of the field <service>,
+	// errorReportingServiceName defines the value of the field <serviceClient>,
 	// required for a valid error reporting payload. If this value is set,
 	// messages where level/severity is higher than or equal to "error" will
 	// be sent to Stackdriver error reporting.
@@ -75,6 +78,9 @@ type StackdriverHook struct {
 
 	// waitGroup holds counters for each subroutine fired
 	waitGroup sync.WaitGroup
+
+	// googleOptions Google client options when creating StackDriver connection.
+	googleOptions []option.ClientOption
 }
 
 // New creates a StackdriverHook using the provided options that is suitible
@@ -94,10 +100,10 @@ func New(opts ...Option) (*StackdriverHook, error) {
 		}
 	}
 
-	// check service, resource, logName set
-	if sh.service == nil && sh.agentClient == nil {
-		return nil, errors.New("no stackdriver service was provided")
-	}
+	// // check serviceClient, resource, logName set
+	// if sh.serviceClient == nil && sh.agentClient == nil {
+	// 	return nil, errors.New("no stackdriver serviceClient was provided")
+	// }
 	if sh.resource == nil && sh.agentClient == nil {
 		return nil, errors.New("the monitored resource was not provided")
 	}
@@ -117,6 +123,28 @@ func New(opts ...Option) (*StackdriverHook, error) {
 	// plus string suffix
 	if sh.errorReportingLogName == "" {
 		sh.errorReportingLogName = sh.logName + "_errors"
+	}
+
+	if sh.serviceClient == nil {
+		// create logging serviceClient
+		l, err := logging.NewClient(context.Background(), sh.projectID, sh.googleOptions...)
+		if err != nil {
+			return nil, err
+		}
+		sh.serviceClient = l
+	}
+
+	if sh.errorClient == nil {
+		// create error reporting serviceClient
+		c, err := errorreporting.NewClient(context.Background(), sh.projectID, errorreporting.Config{}, sh.googleOptions...)
+		if err != nil {
+			return nil, err
+		}
+		sh.errorClient = c
+	}
+
+	if sh.logger == nil {
+		sh.logger = sh.serviceClient.Logger(sh.logName)
 	}
 
 	return sh, nil
@@ -163,9 +191,15 @@ func severity(level logrus.Level) logging.Severity {
 	return logging.Default
 }
 
-// Fire writes the message to the Stackdriver entry service.
+// Fire writes the message to the Stackdriver entry serviceClient.
 func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 	sh.waitGroup.Add(1)
+	var callstack []byte
+	if sh.errorReportingServiceName != "" && isError(entry) {
+		// callstack = stack.Callers(8)
+		var buf [20 * 1024]byte
+		callstack = []byte(chopStack(buf[0:runtime.Stack(buf[:], false)]))
+	}
 	go func(entry *logrus.Entry) {
 		defer sh.waitGroup.Done()
 
@@ -192,9 +226,9 @@ func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 
 		// write log entry
 		if sh.agentClient != nil {
-			sh.sendLogMessageViaAgent(entry, labels, httpReq)
+			sh.sendLogMessageViaAgent(entry, labels, httpReq, callstack)
 		} else {
-			sh.sendLogMessageViaAPI(entry, labels, httpReq)
+			sh.sendLogMessageViaAPI(entry, labels, httpReq, callstack)
 		}
 	}(sh.copyEntry(entry))
 
@@ -218,7 +252,10 @@ func (sh *StackdriverHook) copyEntry(entry *logrus.Entry) *logrus.Entry {
 	return &e
 }
 
-func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) {
+func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry,
+	labels map[string]string, httpReq *logging.HTTPRequest,
+	callstack []byte) {
+
 	// The log entry payload schema is defined by the Google fluentd
 	// logging agent. See more at:
 	// https://github.com/GoogleCloudPlatform/fluent-plugin-google-cloud
@@ -239,7 +276,7 @@ func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels ma
 	// Which reflects the structure of the ErrorEvent type in:
 	// https://godoc.org/google.golang.org/api/clouderrorreporting/v1beta1
 	if sh.errorReportingServiceName != "" && isError(entry) {
-		errorEvent := sh.buildErrorReportingEvent(entry, labels, httpReq)
+		errorEvent := sh.buildErrorReportingEvent(entry, callstack, httpReq)
 		errorStructPayload, err := json.Marshal(errorEvent)
 		if err != nil {
 			log.Printf("error marshaling error reporting data: %s", err.Error())
@@ -262,30 +299,70 @@ func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry, labels ma
 	}
 }
 
-func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) {
+func chopStack(s []byte) string {
+	toSkip := []byte("github.com/sirupsen/logrus.")
+
+	lfFirst := bytes.IndexByte(s, '\n')
+	if lfFirst == -1 {
+		return string(s)
+	}
+	stack := s[lfFirst+1:]
+	var found bool
+	for true {
+		nextLine := bytes.IndexByte(stack, '\n')
+		if nextLine == -1 {
+			return string(s)
+		}
+		toSkipIndex := bytes.Index(stack[:nextLine], toSkip)
+		if found && toSkipIndex == -1 {
+			break
+		} else if toSkipIndex >= 0 {
+			found = true
+		}
+		stack = stack[nextLine+1:]
+		nextLine = bytes.IndexByte(stack, '\n')
+		stack = stack[nextLine+1:]
+	}
+	return string(s[:lfFirst+1]) + string(stack)
+}
+
+func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, callstack []byte, httpReq *logging.HTTPRequest) errorreporting.Entry {
+	var r *http.Request
+	if httpReq != nil {
+		r = httpReq.Request
+	}
+	return errorreporting.Entry{
+		Error: errors.New(entry.Message),
+		Req:   r,
+		User:  "",
+		Stack: callstack,
+	}
+}
+
+func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry,
+	labels map[string]string, httpReq *logging.HTTPRequest,
+	callstack []byte) {
+
 	if sh.errorReportingServiceName != "" && isError(entry) {
-		errorEvent := sh.buildErrorReportingEvent(entry, labels, httpReq)
-		if sh != nil && sh.errorService != nil && sh.errorService.Projects != nil && sh.errorService.Projects.Events != nil {
-			_, err := sh.errorService.Projects.Events.Report(sh.projectID, &errorEvent).Do()
-			if err != nil {
+		if sh != nil && sh.errorClient != nil {
+			e := sh.buildErrorReportingEvent(entry, callstack, httpReq)
+			ctx, canc := context.WithTimeout(context.Background(), 15*time.Second)
+			defer canc()
+			if err := sh.errorClient.ReportSync(ctx, e); err != nil {
 				log.Println("cannot report event:", err)
 			}
 		} else {
-			log.Println("the error reporting service is not set")
+			log.Println("the error reporting serviceClient is not set")
 		}
 	} else {
-		logName := sh.logName
-		if sh.errorReportingLogName != "" && isError(entry) {
-			logName = sh.errorReportingLogName
-		}
 		entrySd := logging.Entry{
 			Timestamp:   entry.Time,
 			Severity:    severity(entry.Level),
 			Payload:     entry.Message,
 			Labels:      labels,
 			HTTPRequest: httpReq,
-			LogName:     logName,
-			Resource:    nil,
+			LogName:     "",
+			Resource:    sh.resource,
 		}
 		if c := entry.Caller; c != nil {
 			entrySd.SourceLocation = &logpb.LogEntrySourceLocation{
@@ -294,43 +371,6 @@ func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry, labels map[
 				Line:     int64(c.Line),
 			}
 		}
-		logger := sh.service.Logger("")
-		logger.Log(entrySd)
+		sh.logger.Log(entrySd)
 	}
-}
-
-func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, labels map[string]string, httpReq *logging.HTTPRequest) errorReporting.ReportedErrorEvent {
-	errorEvent := errorReporting.ReportedErrorEvent{
-		EventTime: entry.Time.Format(time.RFC3339),
-		Message:   entry.Message,
-		ServiceContext: &errorReporting.ServiceContext{
-			Service: sh.errorReportingServiceName,
-			Version: labels["version"],
-		},
-		Context: &errorReporting.ErrorContext{
-			User: labels["user"],
-		},
-	}
-	// Assumes that caller stack frame information of type
-	// github.com/facebookgo/stack.Frame has been added.
-	// Possibly via a library like github.com/Gurpartap/logrus-stack
-	if entry.Data["caller"] != nil {
-		caller := entry.Data["caller"].(stack.Frame)
-		errorEvent.Context.ReportLocation = &errorReporting.SourceLocation{
-			FilePath:     caller.File,
-			FunctionName: caller.Name,
-			LineNumber:   int64(caller.Line),
-		}
-	}
-	if httpReq != nil {
-		errRepHttpRequest := &errorReporting.HttpRequestContext{
-			Method:    httpReq.Request.Method,
-			Referrer:  httpReq.Request.Referer(),
-			RemoteIp:  httpReq.RemoteIP,
-			Url:       httpReq.Request.URL.String(),
-			UserAgent: httpReq.Request.UserAgent(),
-		}
-		errorEvent.Context.HttpRequest = errRepHttpRequest
-	}
-	return errorEvent
 }

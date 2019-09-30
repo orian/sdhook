@@ -1,0 +1,188 @@
+// ResTypeApi, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_api
+ResTypeApi ResType = "tag_api"
+// ResTypeAppScriptFunction, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_app_script_function
+ResTypeAppScriptFunction ResType = "tag_app_script_function"
+// ResTypeAssistantAction, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_assistant_action
+ResTypeAssistantAction ResType = "tag_assistant_action"
+// ResTypeAuditedResource, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_audited_resource
+ResTypeAuditedResource ResType = "tag_audited_resource"
+// ResTypeAwsAlbLoadBalancer, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_alb_load_balancer
+ResTypeAwsAlbLoadBalancer ResType = "tag_aws_alb_load_balancer"
+// ResTypeAwsCloudfrontDistribution, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_cloudfront_distribution
+ResTypeAwsCloudfrontDistribution ResType = "tag_aws_cloudfront_distribution"
+// ResTypeAwsDynamodbTable, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_dynamodb_table
+ResTypeAwsDynamodbTable ResType = "tag_aws_dynamodb_table"
+// ResTypeAwsEbsVolume, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_ebs_volume
+ResTypeAwsEbsVolume ResType = "tag_aws_ebs_volume"
+// ResTypeAwsEc2_instance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_ec2_instance
+ResTypeAwsEc2_instance ResType = "tag_aws_ec2_instance"
+// ResTypeAwsElasticacheCluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_elasticache_cluster
+ResTypeAwsElasticacheCluster ResType = "tag_aws_elasticache_cluster"
+// ResTypeAwsElbLoadBalancer, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_elb_load_balancer
+ResTypeAwsElbLoadBalancer ResType = "tag_aws_elb_load_balancer"
+// ResTypeAwsEmrCluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_emr_cluster
+ResTypeAwsEmrCluster ResType = "tag_aws_emr_cluster"
+// ResTypeAwsKinesisStream, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_kinesis_stream
+ResTypeAwsKinesisStream ResType = "tag_aws_kinesis_stream"
+// ResTypeAwsLambdaFunction, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_lambda_function
+ResTypeAwsLambdaFunction ResType = "tag_aws_lambda_function"
+// ResTypeAwsRdsDatabase, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_rds_database
+ResTypeAwsRdsDatabase ResType = "tag_aws_rds_database"
+// ResTypeAwsRedshiftCluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_redshift_cluster
+ResTypeAwsRedshiftCluster ResType = "tag_aws_redshift_cluster"
+// ResTypeAwsS3_bucket, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_s3_bucket
+ResTypeAwsS3_bucket ResType = "tag_aws_s3_bucket"
+// ResTypeAwsSes, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_ses
+ResTypeAwsSes ResType = "tag_aws_ses"
+// ResTypeAwsSnsTopic, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_sns_topic
+ResTypeAwsSnsTopic ResType = "tag_aws_sns_topic"
+// ResTypeAwsSqsQueue, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_aws_sqs_queue
+ResTypeAwsSqsQueue ResType = "tag_aws_sqs_queue"
+// ResTypeBigqueryDataset, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_bigquery_dataset
+ResTypeBigqueryDataset ResType = "tag_bigquery_dataset"
+// ResTypeBigqueryProject, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_bigquery_project
+ResTypeBigqueryProject ResType = "tag_bigquery_project"
+// ResTypeBigtableCluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_bigtable_cluster
+ResTypeBigtableCluster ResType = "tag_bigtable_cluster"
+// ResTypeBigtableTable, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_bigtable_table
+ResTypeBigtableTable ResType = "tag_bigtable_table"
+// ResTypeBuild, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_build
+ResTypeBuild ResType = "tag_build"
+// ResTypeCloudComposerEnvironment, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_composer_environment
+ResTypeCloudComposerEnvironment ResType = "tag_cloud_composer_environment"
+// ResTypeCloudDataprocCluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_dataproc_cluster
+ResTypeCloudDataprocCluster ResType = "tag_cloud_dataproc_cluster"
+// ResTypeCloudDataprocJob, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_dataproc_job
+ResTypeCloudDataprocJob ResType = "tag_cloud_dataproc_job"
+// ResTypeCloudFunction, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_function
+ResTypeCloudFunction ResType = "tag_cloud_function"
+// ResTypeCloudRunRevision, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_run_revision
+ResTypeCloudRunRevision ResType = "tag_cloud_run_revision"
+// ResTypeCloudSchedulerJob, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_scheduler_job
+ResTypeCloudSchedulerJob ResType = "tag_cloud_scheduler_job"
+// ResTypeCloudTasksQueue, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloud_tasks_queue
+ResTypeCloudTasksQueue ResType = "tag_cloud_tasks_queue"
+// ResTypeCloudiotDevice, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloudiot_device
+ResTypeCloudiotDevice ResType = "tag_cloudiot_device"
+// ResTypeCloudiotDeviceRegistry, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloudiot_device_registry
+ResTypeCloudiotDeviceRegistry ResType = "tag_cloudiot_device_registry"
+// ResTypeCloudmlJob, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloudml_job
+ResTypeCloudmlJob ResType = "tag_cloudml_job"
+// ResTypeCloudmlModelVersion, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloudml_model_version
+ResTypeCloudmlModelVersion ResType = "tag_cloudml_model_version"
+// ResTypeCloudsqlDatabase, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_cloudsql_database
+ResTypeCloudsqlDatabase ResType = "tag_cloudsql_database"
+// ResTypeConsumedApi, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_consumed_api
+ResTypeConsumedApi ResType = "tag_consumed_api"
+// ResTypeCsrRepository, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_csr_repository
+ResTypeCsrRepository ResType = "tag_csr_repository"
+// ResTypeDataflowJob, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_dataflow_job
+ResTypeDataflowJob ResType = "tag_dataflow_job"
+// ResTypeDatastoreRequest, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_datastore_request
+ResTypeDatastoreRequest ResType = "tag_datastore_request"
+// ResTypeDnsManagedZone, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_dns_managed_zone
+ResTypeDnsManagedZone ResType = "tag_dns_managed_zone"
+// ResTypeDnsPolicy, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_dns_policy
+ResTypeDnsPolicy ResType = "tag_dns_policy"
+// ResTypeDnsQuery, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_dns_query
+ResTypeDnsQuery ResType = "tag_dns_query"
+// ResTypeFilestoreInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_filestore_instance
+ResTypeFilestoreInstance ResType = "tag_filestore_instance"
+// ResTypeFirebaseDomain, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_firebase_domain
+ResTypeFirebaseDomain ResType = "tag_firebase_domain"
+// ResTypeFirebaseNamespace, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_firebase_namespace
+ResTypeFirebaseNamespace ResType = "tag_firebase_namespace"
+// ResTypeFirestoreInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_firestore_instance
+ResTypeFirestoreInstance ResType = "tag_firestore_instance"
+// ResTypeGaeApp, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gae_app
+ResTypeGaeApp ResType = "tag_gae_app"
+// ResTypeGaeInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gae_instance
+ResTypeGaeInstance ResType = "tag_gae_instance"
+// ResTypeGceDisk, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_disk
+ResTypeGceDisk ResType = "tag_gce_disk"
+// ResTypeGceInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_instance
+ResTypeGceInstance ResType = "tag_gce_instance"
+// ResTypeGceNodeGroup, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_node_group
+ResTypeGceNodeGroup ResType = "tag_gce_node_group"
+// ResTypeGceNodeTemplate, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_node_template
+ResTypeGceNodeTemplate ResType = "tag_gce_node_template"
+// ResTypeGceResourcePolicy, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_resource_policy
+ResTypeGceResourcePolicy ResType = "tag_gce_resource_policy"
+// ResTypeGceRouter, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gce_router
+ResTypeGceRouter ResType = "tag_gce_router"
+// ResTypeGcsBucket, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gcs_bucket
+ResTypeGcsBucket ResType = "tag_gcs_bucket"
+// ResTypeGenericNode, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_generic_node
+ResTypeGenericNode ResType = "tag_generic_node"
+// ResTypeGenericTask, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_generic_task
+ResTypeGenericTask ResType = "tag_generic_task"
+// ResTypeGkeContainer, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_gke_container
+ResTypeGkeContainer ResType = "tag_gke_container"
+// ResTypeGlobal, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_global
+ResTypeGlobal ResType = "tag_global"
+// ResTypeHttpsLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_https_lb_rule
+ResTypeHttpsLbRule ResType = "tag_https_lb_rule"
+// ResTypeIdentitytoolkitProject, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_identitytoolkit_project
+ResTypeIdentitytoolkitProject ResType = "tag_identitytoolkit_project"
+// ResTypeIdentitytoolkitTenant, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_identitytoolkit_tenant
+ResTypeIdentitytoolkitTenant ResType = "tag_identitytoolkit_tenant"
+// ResTypeInterconnect, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_interconnect
+ResTypeInterconnect ResType = "tag_interconnect"
+// ResTypeInterconnectAttachment, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_interconnect_attachment
+ResTypeInterconnectAttachment ResType = "tag_interconnect_attachment"
+// ResTypeInternalHttpLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_internal_http_lb_rule
+ResTypeInternalHttpLbRule ResType = "tag_internal_http_lb_rule"
+// ResTypeInternalTcpLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_internal_tcp_lb_rule
+ResTypeInternalTcpLbRule ResType = "tag_internal_tcp_lb_rule"
+// ResTypeInternalUdpLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_internal_udp_lb_rule
+ResTypeInternalUdpLbRule ResType = "tag_internal_udp_lb_rule"
+// ResTypeK8s_cluster, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_k8s_cluster
+ResTypeK8s_cluster ResType = "tag_k8s_cluster"
+// ResTypeK8s_container, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_k8s_container
+ResTypeK8s_container ResType = "tag_k8s_container"
+// ResTypeK8s_node, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_k8s_node
+ResTypeK8s_node ResType = "tag_k8s_node"
+// ResTypeK8s_pod, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_k8s_pod
+ResTypeK8s_pod ResType = "tag_k8s_pod"
+// ResTypeKnativeRevision, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_knative_revision
+ResTypeKnativeRevision ResType = "tag_knative_revision"
+// ResTypeL7_lb_rule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_l7_lb_rule
+ResTypeL7_lb_rule ResType = "tag_l7_lb_rule"
+// ResTypeLoggingExclusion, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_logging_exclusion
+ResTypeLoggingExclusion ResType = "tag_logging_exclusion"
+// ResTypeLoggingSink, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_logging_sink
+ResTypeLoggingSink ResType = "tag_logging_sink"
+// ResTypeMetric, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_metric
+ResTypeMetric ResType = "tag_metric"
+// ResTypeMicrosoftAdDomain, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_microsoft_ad_domain
+ResTypeMicrosoftAdDomain ResType = "tag_microsoft_ad_domain"
+// ResTypeNatGateway, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_nat_gateway
+ResTypeNatGateway ResType = "tag_nat_gateway"
+// ResTypeNetappCloudVolume, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_netapp_cloud_volume
+ResTypeNetappCloudVolume ResType = "tag_netapp_cloud_volume"
+// ResTypeNetworkSecurityPolicy, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_network_security_policy
+ResTypeNetworkSecurityPolicy ResType = "tag_network_security_policy"
+// ResTypePubsubSnapshot, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_pubsub_snapshot
+ResTypePubsubSnapshot ResType = "tag_pubsub_snapshot"
+// ResTypePubsubSubscription, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_pubsub_subscription
+ResTypePubsubSubscription ResType = "tag_pubsub_subscription"
+// ResTypePubsubTopic, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_pubsub_topic
+ResTypePubsubTopic ResType = "tag_pubsub_topic"
+// ResTypeRecommender, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_recommender
+ResTypeRecommender ResType = "tag_recommender"
+// ResTypeRedisInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_redis_instance
+ResTypeRedisInstance ResType = "tag_redis_instance"
+// ResTypeSpannerInstance, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_spanner_instance
+ResTypeSpannerInstance ResType = "tag_spanner_instance"
+// ResTypeTcpLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_tcp_lb_rule
+ResTypeTcpLbRule ResType = "tag_tcp_lb_rule"
+// ResTypeTcpSslProxyRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_tcp_ssl_proxy_rule
+ResTypeTcpSslProxyRule ResType = "tag_tcp_ssl_proxy_rule"
+// ResTypeTpuWorker, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_tpu_worker
+ResTypeTpuWorker ResType = "tag_tpu_worker"
+// ResTypeUdpLbRule, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_udp_lb_rule
+ResTypeUdpLbRule ResType = "tag_udp_lb_rule"
+// ResTypeUptimeUrl, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_uptime_url
+ResTypeUptimeUrl ResType = "tag_uptime_url"
+// ResTypeVpnGateway, for description and list of labels https://cloud.google.com/monitoring/api/resources#tag_vpn_gateway
+ResTypeVpnGateway ResType = "tag_vpn_gateway"

@@ -1,22 +1,15 @@
 package sdhook
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"google.golang.org/api/option"
-	"io/ioutil"
-	"net/http"
-
-	"cloud.google.com/go/compute/metadata"
-	"github.com/fluent/fluent-logger-golang/fluent"
-	"github.com/knq/jwt/gserviceaccount"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
-	errorReporting "google.golang.org/api/clouderrorreporting/v1beta1"
+	"cloud.google.com/go/errorreporting"
 	"cloud.google.com/go/logging"
+	"context"
+	"fmt"
+	"github.com/fluent/fluent-logger-golang/fluent"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
+	mrpb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
 // Option represents an option that modifies the Stackdriver hook settings.
@@ -40,52 +33,28 @@ func ProjectID(projectID string) Option {
 	}
 }
 
-// EntriesService is an option that sets the Google API entry service to use
+// EntriesService is an option that sets the Google API entry serviceClient to use
 // with Stackdriver.
-// func EntriesService(service *logging.EntriesService) Option {
+// func EntriesService(serviceClient *logging.EntriesService) Option {
 // 	return func(sh *StackdriverHook) error {
-// 		sh.service = service
+// 		sh.serviceClient = serviceClient
 // 		return nil
 // 	}
 // }
 
-// LoggingService is an option that sets the Google API logging service to use.
+// LoggingService is an option that sets the Google API logging serviceClient to use.
 func LoggingClient(service *logging.Client) Option {
 	return func(sh *StackdriverHook) error {
-		sh.service = service
+		sh.serviceClient = service
 		return nil
 	}
 }
 
-// ErrorService is an option that sets the Google API error reporting service to use.
-func ErrorService(errorService *errorReporting.Service) Option {
+// ErrorService is an option that sets the Google API error reporting serviceClient to use.
+func ErrorService(errorService *errorreporting.Client) Option {
 	return func(sh *StackdriverHook) error {
-		sh.errorService = errorService
+		sh.errorClient = errorService
 		return nil
-	}
-}
-
-// HTTPClient is an option that sets the http.Client to be used when creating
-// the Stackdriver service.
-func HTTPClient(client *http.Client) Option {
-	return func(sh *StackdriverHook) error {
-		// create logging service
-		l, err := logging.NewClient(context.Background(), "",
-			option.WithHTTPClient(client))
-		if err != nil {
-			return err
-		}
-		// create error reporting service
-		e, err := errorReporting.New(client)
-		if err != nil {
-			return err
-		}
-		err = ErrorService(e)(sh)
-		if err != nil {
-			return err
-		}
-
-		return LoggingClient(l)(sh)
 	}
 }
 
@@ -154,7 +123,7 @@ func PartialSuccess(enabled bool) Option {
 	}
 }
 
-// ErrorReportingService is an option that defines the name of the service
+// ErrorReportingService is an option that defines the name of the serviceClient
 // being tracked for Stackdriver error reporting.
 // See:
 // https://cloud.google.com/error-reporting/docs/formatting-error-messages
@@ -168,105 +137,6 @@ func ErrorReportingService(service string) Option {
 // requiredScopes are the oauth2 scopes required for stackdriver logging.
 var requiredScopes = []string{
 	logging.WriteScope,
-}
-
-// GoogleServiceAccountCredentialsJSON is an option that creates the
-// Stackdriver logging service using the supplied Google service account
-// credentials.
-//
-// Google Service Account credentials can be downloaded from the Google Cloud
-// console: https://console.cloud.google.com/iam-admin/serviceaccounts/
-func GoogleServiceAccountCredentialsJSON(buf []byte) Option {
-	return func(sh *StackdriverHook) error {
-		var err error
-
-		// load credentials
-		gsa, err := gserviceaccount.FromJSON(buf)
-		if err != nil {
-			return err
-		}
-
-		// check project id
-		if gsa.ProjectID == "" {
-			return errors.New("google service account credentials missing project_id")
-		}
-
-		// set project id
-		err = ProjectID(gsa.ProjectID)(sh)
-		if err != nil {
-			return err
-		}
-
-		// set resource type
-		err = Resource(ResTypeProject, map[string]string{
-			"project_id": gsa.ProjectID,
-		})(sh)
-		if err != nil {
-			return err
-		}
-
-		// create token source
-		ts, err := gsa.TokenSource(nil, requiredScopes...)
-		if err != nil {
-			return err
-		}
-
-		// set client
-		return HTTPClient(&http.Client{
-			Transport: &oauth2.Transport{
-				Source: oauth2.ReuseTokenSource(nil, ts),
-			},
-		})(sh)
-	}
-}
-
-// GoogleServiceAccountCredentialsFile is an option that loads Google Service
-// Account credentials for use with the StackdriverHook from the specified
-// file.
-//
-// Google Service Account credentials can be downloaded from the Google Cloud
-// console: https://console.cloud.google.com/iam-admin/serviceaccounts/
-func GoogleServiceAccountCredentialsFile(path string) Option {
-	return func(sh *StackdriverHook) error {
-		buf, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		return GoogleServiceAccountCredentialsJSON(buf)(sh)
-	}
-}
-
-// GoogleComputeCredentials is an option that loads the Google Service Account
-// credentials from the GCE metadata associated with the GCE compute instance.
-// If serviceAccount is empty, then the default service account credentials
-// associated with the GCE instance will be used.
-func GoogleComputeCredentials(serviceAccount string) Option {
-	return func(sh *StackdriverHook) error {
-		// get compute metadata scopes associated with the service account
-		scopes, err := metadata.Scopes(serviceAccount)
-		if err != nil {
-			return err
-		}
-
-		// check if all the necessary scopes are provided
-		for _, s := range requiredScopes {
-			if !sliceContains(scopes, s) {
-				// NOTE: if you are seeing this error, you probably need to
-				// recreate your compute instance with the correct scope
-				//
-				// as of August 2016, there is not a way to add a scope to an
-				// existing compute instance
-				return fmt.Errorf("missing required scope %s in compute metadata", s)
-			}
-		}
-
-		return HTTPClient(&http.Client{
-			Transport: &oauth2.Transport{
-				Source: google.ComputeTokenSource(serviceAccount),
-			},
-		})(sh)
-	}
 }
 
 // sliceContains returns true if haystack contains needle.
@@ -320,11 +190,15 @@ func GoogleDefaultCredentials() Option {
 			return err
 		}
 
+		sh.googleOptions = append(sh.googleOptions, option.WithCredentials(creds))
 		sh.projectID = creds.ProjectID
-		return HTTPClient(&http.Client{
-			Transport: &oauth2.Transport{
-				Source: creds.TokenSource,
-			},
-		})(sh)
+		return nil
+	}
+}
+
+func GoogleClientOption(opts ...option.ClientOption) Option {
+	return func(sh *StackdriverHook) error {
+		sh.googleOptions = append(sh.googleOptions, opts...)
+		return nil
 	}
 }
