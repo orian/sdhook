@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/knq/sdhook"
+	"github.com/orian/sdhook"
 	"github.com/sirupsen/logrus"
 )
 
