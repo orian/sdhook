@@ -33,6 +33,7 @@ func main() {
 				"job":        "test",
 				"task_id":    fmt.Sprintf("test-%d", time.Now().Unix()),
 			}),
+			sdhook.SyncLevels(logrus.PanicLevel, logrus.FatalLevel),
 		)
 		if err != nil {
 			logger.Fatal(err)
@@ -56,7 +57,8 @@ func main() {
 				"task_id":    fmt.Sprintf("test-%d", time.Now().Unix()),
 			}),
 			sdhook.ErrorReportingService("generic-test-job"),
-			sdhook.Levels(logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel, logrus.TraceLevel),
+			sdhook.Levels(logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel),
+			sdhook.SyncLevels(logrus.ErrorLevel, logrus.PanicLevel, logrus.FatalLevel),
 		)
 		if err != nil {
 			logger.Fatal(err)

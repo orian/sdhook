@@ -81,6 +81,9 @@ type StackdriverHook struct {
 
 	// googleOptions Google client options when creating StackDriver connection.
 	googleOptions []option.ClientOption
+
+	// syncLevel ensures that given level logs are send synchronously.
+	syncLevel map[logrus.Level]bool
 }
 
 // New creates a StackdriverHook using the provided options that is suitible
@@ -89,7 +92,8 @@ func New(opts ...Option) (*StackdriverHook, error) {
 	var err error
 
 	sh := &StackdriverHook{
-		levels: logrus.AllLevels,
+		levels:    logrus.AllLevels,
+		syncLevel: make(map[logrus.Level]bool),
 	}
 
 	// apply opts
@@ -191,6 +195,38 @@ func severity(level logrus.Level) logging.Severity {
 	return logging.Default
 }
 
+func (sh *StackdriverHook) send(entry *logrus.Entry, callstack []byte) {
+	defer sh.waitGroup.Done()
+
+	var httpReq *logging.HTTPRequest
+	// convert entry data to labels
+	labels := make(map[string]string, len(entry.Data))
+	for k, v := range entry.Data {
+		switch x := v.(type) {
+		case string:
+			labels[k] = x
+
+		case *http.Request:
+			httpReq = &logging.HTTPRequest{
+				Request: x,
+			}
+
+		case *logging.HTTPRequest:
+			httpReq = x
+
+		default:
+			labels[k] = fmt.Sprintf("%v", v)
+		}
+	}
+
+	// write log entry
+	if sh.agentClient != nil {
+		sh.sendLogMessageViaAgent(entry, labels, httpReq, callstack)
+	} else {
+		sh.sendLogMessageViaAPI(entry, labels, httpReq, callstack)
+	}
+}
+
 // Fire writes the message to the Stackdriver entry serviceClient.
 func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 	sh.waitGroup.Add(1)
@@ -200,37 +236,12 @@ func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 		var buf [20 * 1024]byte
 		callstack = []byte(chopStack(buf[0:runtime.Stack(buf[:], false)]))
 	}
-	go func(entry *logrus.Entry) {
-		defer sh.waitGroup.Done()
 
-		var httpReq *logging.HTTPRequest
-		// convert entry data to labels
-		labels := make(map[string]string, len(entry.Data))
-		for k, v := range entry.Data {
-			switch x := v.(type) {
-			case string:
-				labels[k] = x
-
-			case *http.Request:
-				httpReq = &logging.HTTPRequest{
-					Request: x,
-				}
-
-			case *logging.HTTPRequest:
-				httpReq = x
-
-			default:
-				labels[k] = fmt.Sprintf("%v", v)
-			}
-		}
-
-		// write log entry
-		if sh.agentClient != nil {
-			sh.sendLogMessageViaAgent(entry, labels, httpReq, callstack)
-		} else {
-			sh.sendLogMessageViaAPI(entry, labels, httpReq, callstack)
-		}
-	}(sh.copyEntry(entry))
+	if sh.syncLevel[entry.Level] {
+		sh.send(sh.copyEntry(entry), callstack)
+	} else {
+		go sh.send(sh.copyEntry(entry), callstack)
+	}
 
 	return nil
 }

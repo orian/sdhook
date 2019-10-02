@@ -167,6 +167,18 @@ func GoogleLoggingAgent() Option {
 	}
 }
 
+func SyncLevels(levels ...logrus.Level) Option {
+	return func(sh *StackdriverHook) error {
+		if sh.syncLevel == nil {
+			sh.syncLevel = make(map[logrus.Level]bool)
+		}
+		for _, l := range levels {
+			sh.syncLevel[l] = true
+		}
+		return nil
+	}
+}
+
 // GoogleDefaultCredentials returns the token source for
 // "Application Default Credentials".
 //
