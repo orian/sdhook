@@ -87,11 +87,8 @@ func Resource(typ ResType, labels map[string]string) Option {
 // if the projectID is set. Otherwise, it's just "{logName}"
 func LogName(name string) Option {
 	return func(sh *StackdriverHook) error {
-		if sh.projectID == "" {
-			sh.logName = name
-		} else {
-			sh.logName = fmt.Sprintf("projects/%s/logs/%s", sh.projectID, name)
-		}
+		// we don't need whole path, {logName} is enough as GCP writes rest of it by deafult
+		sh.logName = name
 		return nil
 	}
 }
