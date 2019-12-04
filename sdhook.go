@@ -140,7 +140,7 @@ func New(opts ...Option) (*StackdriverHook, error) {
 
 	if sh.errorClient == nil {
 		// create error reporting serviceClient
-		c, err := errorreporting.NewClient(context.Background(), sh.projectID, errorreporting.Config{}, sh.googleOptions...)
+		c, err := errorreporting.NewClient(context.Background(), sh.projectID, errorreporting.Config{ServiceName: sh.logName}, sh.googleOptions...)
 		if err != nil {
 			return nil, err
 		}
