@@ -194,7 +194,9 @@ func SyncLevels(levels ...logrus.Level) Option {
 //      credentials from the metadata server.
 func GoogleDefaultCredentials() Option {
 	return func(sh *StackdriverHook) error {
-		creds, err := google.FindDefaultCredentials(context.Background())
+		creds, err := google.FindDefaultCredentials(context.Background(),
+			"https://www.googleapis.com/auth/logging.write",
+			"https://www.googleapis.com/auth/cloud-platform")
 		if err != nil {
 			return err
 		}
