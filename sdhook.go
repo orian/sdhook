@@ -117,8 +117,7 @@ func New(opts ...Option) (*StackdriverHook, error) {
 
 	// set default project name
 	if sh.logName == "" {
-		err = LogName(DefaultName)(sh)
-		if err != nil {
+		if err = LogName(DefaultName)(sh); err != nil {
 			return nil, err
 		}
 	}

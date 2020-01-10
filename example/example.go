@@ -19,13 +19,14 @@ func main() {
 
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	logger.Infof("project id: %s", projectID)
+	logger.SetReportCaller(true)
 
 	{
 		// create stackdriver hook
 		hook, err := sdhook.New(
 			sdhook.GoogleDefaultCredentials(),
+			sdhook.ProjectID(projectID),
 			sdhook.LogName("some_log"),
-			sdhook.ProjectID("skypath-dev"),
 			sdhook.Resource(sdhook.ResTypeGenericTask, map[string]string{
 				"project_id": projectID,
 				"location":   "europe:poland:olsztyn:1",
@@ -48,7 +49,7 @@ func main() {
 		hook, err := sdhook.New(
 			sdhook.GoogleDefaultCredentials(),
 			sdhook.ErrorReportingLogName("some_log_error"),
-			sdhook.ProjectID("skypath-dev"),
+			sdhook.ProjectID(projectID),
 			sdhook.Resource(sdhook.ResTypeGenericTask, map[string]string{
 				"project_id": projectID,
 				"location":   "europe:poland:olsztyn:1",
