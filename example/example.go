@@ -72,5 +72,6 @@ func main() {
 	logger.Printf("a random message @ %s", time.Now().Format("15:04:05"))
 	logger.Errorf("to jest sformatowany error %d", 123)
 
-	defer logrus.Exit(0)
+	// defer logrus.Exit(0)
+	logger.Fatal("fatal error")
 }

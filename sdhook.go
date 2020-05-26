@@ -30,6 +30,8 @@ const (
 	DefaultName = "default"
 )
 
+var MaxLogWriteDuration = 15 * time.Second
+
 // StackdriverHook provides a logrus hook to Google Stackdriver logging.
 type StackdriverHook struct {
 	// levels are the levels that logrus will hook to.
@@ -76,8 +78,8 @@ type StackdriverHook struct {
 	// If not given, the string "<logName>_error" is used.
 	errorReportingLogName string
 
-	// waitGroup holds counters for each subroutine fired
-	waitGroup sync.WaitGroup
+	// m synchronizes access to agentClient and logger for flushing and closing.
+	m sync.RWMutex
 
 	// googleOptions Google client options when creating StackDriver connection.
 	googleOptions []option.ClientOption
@@ -194,8 +196,8 @@ func severity(level logrus.Level) logging.Severity {
 	return logging.Default
 }
 
-func (sh *StackdriverHook) send(entry *logrus.Entry, callstack []byte) {
-	defer sh.waitGroup.Done()
+func (sh *StackdriverHook) send(entry *logrus.Entry, callstack []byte, sync bool) {
+	defer sh.m.RUnlock()
 
 	var httpReq *logging.HTTPRequest
 	// convert entry data to labels
@@ -220,15 +222,15 @@ func (sh *StackdriverHook) send(entry *logrus.Entry, callstack []byte) {
 
 	// write log entry
 	if sh.agentClient != nil {
-		sh.sendLogMessageViaAgent(entry, labels, httpReq, callstack)
+		sh.sendLogMessageViaAgent(entry, labels, httpReq, callstack, sync)
 	} else {
-		sh.sendLogMessageViaAPI(entry, labels, httpReq, callstack)
+		sh.sendLogMessageViaAPI(entry, labels, httpReq, callstack, sync)
 	}
 }
 
 // Fire writes the message to the Stackdriver entry serviceClient.
 func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
-	sh.waitGroup.Add(1)
+	sh.m.RLock()
 	var callstack []byte
 	if sh.errorReportingServiceName != "" && isError(entry) {
 		// callstack = stack.Callers(8)
@@ -237,9 +239,9 @@ func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 	}
 
 	if sh.syncLevel[entry.Level] {
-		sh.send(sh.copyEntry(entry), callstack)
+		sh.send(sh.copyEntry(entry), callstack, true)
 	} else {
-		go sh.send(sh.copyEntry(entry), callstack)
+		go sh.send(sh.copyEntry(entry), callstack, false)
 	}
 
 	return nil
@@ -250,7 +252,16 @@ func (sh *StackdriverHook) Fire(entry *logrus.Entry) error {
 // your logs are delivered before your program exits.
 // `logrus.RegisterExitHandler(h.Wait)`
 func (sh *StackdriverHook) Wait() {
-	sh.waitGroup.Wait()
+	sh.m.Lock()
+	defer sh.m.Unlock()
+	if sh.agentClient != nil {
+		if err := sh.agentClient.Close(); err != nil {
+			log.Printf("failed to close agent client (via Fluentd): %s", err)
+		}
+	}
+	if err := sh.logger.Flush(); err != nil {
+		log.Printf("failed to flush logs (via API): %s", err)
+	}
 }
 
 func (sh *StackdriverHook) copyEntry(entry *logrus.Entry) *logrus.Entry {
@@ -264,7 +275,7 @@ func (sh *StackdriverHook) copyEntry(entry *logrus.Entry) *logrus.Entry {
 
 func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry,
 	labels map[string]string, httpReq *logging.HTTPRequest,
-	callstack []byte) {
+	callstack []byte, sync bool) {
 
 	// The log entry payload schema is defined by the Google fluentd
 	// logging agent. See more at:
@@ -302,10 +313,8 @@ func (sh *StackdriverHook) sendLogMessageViaAgent(entry *logrus.Entry,
 		if err := sh.agentClient.Post(sh.errorReportingLogName, errorJSONPayload); err != nil {
 			log.Printf("error posting error reporting entries to logging agent: %s", err.Error())
 		}
-	} else {
-		if err := sh.agentClient.Post(sh.logName, logEntry); err != nil {
-			log.Printf("error posting log entries to logging agent: %s", err.Error())
-		}
+	} else if err := sh.agentClient.Post(sh.logName, logEntry); err != nil {
+		log.Printf("error posting log entries to logging agent: %s", err.Error())
 	}
 }
 
@@ -351,15 +360,19 @@ func (sh *StackdriverHook) buildErrorReportingEvent(entry *logrus.Entry, callsta
 
 func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry,
 	labels map[string]string, httpReq *logging.HTTPRequest,
-	callstack []byte) {
+	callstack []byte, sync bool) {
 
 	if sh.errorReportingServiceName != "" && isError(entry) {
 		if sh != nil && sh.errorClient != nil {
 			e := sh.buildErrorReportingEvent(entry, callstack, httpReq)
-			ctx, canc := context.WithTimeout(context.Background(), 15*time.Second)
-			defer canc()
-			if err := sh.errorClient.ReportSync(ctx, e); err != nil {
-				log.Println("cannot report event:", err)
+			if sync {
+				ctx, canc := context.WithTimeout(context.Background(), MaxLogWriteDuration)
+				defer canc()
+				if err := sh.errorClient.ReportSync(ctx, e); err != nil {
+					log.Println("cannot report event:", err)
+				}
+			} else {
+				sh.errorClient.Report(e)
 			}
 		} else {
 			log.Println("the error reporting serviceClient is not set")
@@ -381,6 +394,14 @@ func (sh *StackdriverHook) sendLogMessageViaAPI(entry *logrus.Entry,
 				Line:     int64(c.Line),
 			}
 		}
-		sh.logger.Log(entrySd)
+		if sync {
+			ctx, canc := context.WithTimeout(context.Background(), MaxLogWriteDuration)
+			defer canc()
+			if err := sh.logger.LogSync(ctx, entrySd); err != nil {
+				log.Printf("cannot write to log: %s", err)
+			}
+		} else {
+			sh.logger.Log(entrySd)
+		}
 	}
 }
