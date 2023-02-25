@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tinylib/msgp v1.1.1 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200107162124-548cf772de50 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	google.golang.org/api v0.15.0
 	google.golang.org/genproto v0.0.0-20200108215221-bd8f9a0ef82f
 )
